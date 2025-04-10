@@ -4,10 +4,18 @@ name: default
 
 platform:
   os: linux
-  arch: arm64
+  arch: amd64
 
 steps:
-  - name: run python
-    image: python:3.9
+  - name: convert-and-push
+    image: python:3.10
+    environment:
+      GIT_AUTHOR_NAME: Drone CI Bot
+      GIT_AUTHOR_EMAIL: ci-bot@example.com
+      GIT_COMMITTER_NAME: Drone CI Bot
+      GIT_COMMITTER_EMAIL: ci-bot@example.com
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
     commands:
-      - python hello.py
+      - pip install zstandard
+      - python3 "ZSTD to CSV Converter.py"
