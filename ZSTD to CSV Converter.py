@@ -3,13 +3,14 @@ import json
 import csv
 import zstandard as zstd
 from datetime import datetime
+import subprocess
 
 # Temp directory for processing
 TEMP_DIR = 'Bronto Export Docs/'
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 # CSV file size management
-ROWS_PER_CSV = 1048575  # Save 1 million rows per CSV
+ROWS_PER_CSV = 1048575  # Save ~1 million rows per CSV
 
 def process_zstd_to_multiple_csv(local_file):
     try:
@@ -20,7 +21,7 @@ def process_zstd_to_multiple_csv(local_file):
 
         file_count = 1
         row_count = 0
-        csv_files = []  # Store the names of created CSV files
+        csv_files = []
 
         current_timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         csv_file_path = f'{TEMP_DIR}Exported_data_part_{file_count}_{current_timestamp}.csv'
@@ -28,20 +29,19 @@ def process_zstd_to_multiple_csv(local_file):
         csv_file = open(csv_file_path, 'w', newline='')
         writer = csv.writer(csv_file)
         is_header_written = False
-
-        total_rows = 0  # Track total rows processed
+        total_rows = 0
 
         with open(decompressed_file, 'r') as json_file:
             for line in json_file:
-                line = line.strip()  # Ensure the line is stripped of whitespace
-                if not line:  # Skip empty lines
+                line = line.strip()
+                if not line:
                     continue
 
                 data = json.loads(line)
                 total_rows += 1
 
                 if not is_header_written:
-                    writer.writerow(data.keys())  # Write header once
+                    writer.writerow(data.keys())
                     is_header_written = True
 
                 writer.writerow(data.values())
@@ -56,14 +56,11 @@ def process_zstd_to_multiple_csv(local_file):
                     csv_files.append(csv_file_path)
                     csv_file = open(csv_file_path, 'w', newline='')
                     writer = csv.writer(csv_file)
-                    writer.writerow(data.keys())  # Write header for new file
+                    writer.writerow(data.keys())
 
-        # Close the last open CSV file
         csv_file.close()
-
         print(f"\nProcessing completed. Total rows processed: {total_rows}.\n")
 
-        # Delete the .zstd and .json files
         if os.path.exists(local_file):
             os.remove(local_file)
             print(f"Deleted zstd file: {local_file}")
@@ -71,16 +68,36 @@ def process_zstd_to_multiple_csv(local_file):
             os.remove(decompressed_file)
             print(f"Deleted json file: {decompressed_file}")
 
-        # Print CSV file names and their locations
         print("\nGenerated CSV files:")
         for file in csv_files:
             print(file)
         print("\n")
 
+        return csv_files
+
     except Exception as e:
         print(f"Error processing zstd file: {e}")
+        return []
+
+def git_commit_csv_files(files):
+    try:
+        subprocess.run(['git', 'config', '--global', 'user.email', 'ci-bot@example.com'], check=True)
+        subprocess.run(['git', 'config', '--global', 'user.name', 'Drone CI Bot'], check=True)
+
+        for file in files:
+            subprocess.run(['git', 'add', file], check=True)
+
+        subprocess.run(['git', 'commit', '-m', 'Add exported CSV files from ZSTD'], check=True)
+
+        repo_url = os.getenv("DRONE_REMOTE_URL").replace("https://", f"https://{os.getenv('GITHUB_TOKEN')}@")
+        subprocess.run(['git', 'push', repo_url], check=True)
+
+        print("CSV files committed and pushed to the repository.")
+    except subprocess.CalledProcessError as e:
+        print(f"Git command failed: {e}")
 
 if __name__ == '__main__':
-    # Provide the path to your local zstd file here
     local_zstd_file = "Test_Log.zst"
-    process_zstd_to_multiple_csv(local_zstd_file)
+    csv_files = process_zstd_to_multiple_csv(local_zstd_file)
+    if csv_files:
+        git_commit_csv_files(csv_files)
