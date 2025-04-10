@@ -2,8 +2,12 @@ kind: pipeline
 type: docker
 name: default
 
+platform:
+  os: linux
+  arch: arm64
+
 steps:
-  - name: run python script
-    image: python:3.10
+  - name: run python
+    image: python:3.9
     commands:
       - python hello.py
