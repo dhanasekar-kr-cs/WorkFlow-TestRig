@@ -3,8 +3,7 @@ type: docker
 name: default
 
 steps:
-  - name: run zstd converter
+  - name: run python script
     image: python:3.10
     commands:
-      - pip install pandas
-      - python "ZSTD to CSV Converter.py"
+      - python hello.py
