@@ -9,13 +9,7 @@ platform:
 steps:
   - name: test-env
     image: bash
-    environment:
-      GITHUB_TOKEN: 
-        from_secret: GITHUB_TOKEN
     commands:
       - echo "Checking if GITHUB_TOKEN is set..."
-      - echo "Token length: ${#GITHUB_TOKEN}"
-      - echo "Starts with: ${GITHUB_TOKEN:0:4}"
-
-secrets:
-  - name: GITHUB_TOKEN
+      - bash -c 'echo "Token length: ${#DRONE_SECRET_GITHUB_TOKEN}"'
+      - bash -c 'echo "Starts with: ${DRONE_SECRET_GITHUB_TOKEN:0:4}"'
