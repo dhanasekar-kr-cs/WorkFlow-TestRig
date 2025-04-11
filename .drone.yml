@@ -14,8 +14,8 @@ steps:
         from_secret: GITHUB_TOKEN
     commands:
       - echo "Checking if secret is available..."
-      - echo "Token length: ${#GITHUB_TOKEN}"
-      - echo "Starts with: ${GITHUB_TOKEN:0:4}"
+      - bash -c 'echo "Token length: ${#GITHUB_TOKEN}"'
+      - bash -c 'echo "Starts with: ${GITHUB_TOKEN:0:4}"'
 
 # kind: pipeline
 # type: docker
