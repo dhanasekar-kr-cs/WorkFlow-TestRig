@@ -5,10 +5,10 @@ name: test-secret
 platform:
   os: linux
   arch: amd64
-  
+
 steps:
   - name: run-hello
     image: python:3.11
     commands:
-      - echo "Running hello.py"
-      - python -c "for i in range(30): print(f'Run {i+1}: Hello from Drone CI!')"
+      - echo "Running hello.py from repo..."
+      - python hello.py
