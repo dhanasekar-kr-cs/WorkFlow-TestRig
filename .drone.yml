@@ -1,15 +1,10 @@
 kind: pipeline
 type: docker
-name: test-secret
-
-platform:
-  os: linux
-  arch: amd64
+name: hello-py
 
 steps:
-  - name: test-env
-    image: bash
+  - name: run-hello
+    image: python:3.11
     commands:
-      - echo "Checking if GITHUB_TOKEN is set..."
-      - "bash -c 'echo \"Token length: ${#DRONE_SECRET_GITHUB_TOKEN}\"'"
-      - "bash -c 'echo \"Starts with: ${DRONE_SECRET_GITHUB_TOKEN:0:4}\"'"
+      - echo "Running hello.py"
+      - python -c "for i in range(30): print(f'Run {i+1}: Hello from Drone CI!')"
