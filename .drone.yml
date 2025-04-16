@@ -1,7 +1,11 @@
 kind: pipeline
 type: docker
-name: hello-py
+name: test-secret
 
+platform:
+  os: linux
+  arch: amd64
+  
 steps:
   - name: run-hello
     image: python:3.11
