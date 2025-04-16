@@ -1,18 +1,15 @@
 kind: pipeline
 type: docker
-name: test-secret
+name: run-zstd-converter
 
 platform:
   os: linux
   arch: amd64
 
 steps:
-  - name: run-hello
+  - name: run-zstd-to-csv
     image: python:3.11
     commands:
-      - |
-        echo "Running hello.py"
-        python -c "
-for i in range(30):
-    print(f'Run {i+1}: Hello from Drone CI!')
-"
+      - pip install zstandard
+      - echo "Running ZSTD to CSV Converter"
+      - python zstd_to_csv_converter.py
