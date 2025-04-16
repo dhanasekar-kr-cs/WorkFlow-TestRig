@@ -11,5 +11,5 @@ steps:
     image: bash
     commands:
       - echo "Checking if GITHUB_TOKEN is set..."
-      - bash -c 'echo "Token length: ${#DRONE_SECRET_GITHUB_TOKEN}"'
-      - bash -c 'echo "Starts with: ${DRONE_SECRET_GITHUB_TOKEN:0:4}"'
+      - "bash -c 'echo \"Token length: ${#DRONE_SECRET_GITHUB_TOKEN}\"'"
+      - "bash -c 'echo \"Starts with: ${DRONE_SECRET_GITHUB_TOKEN:0:4}\"'"
