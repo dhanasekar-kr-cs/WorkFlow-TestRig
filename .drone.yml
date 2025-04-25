@@ -12,8 +12,20 @@ steps:
     commands:
       - python -V
       - pip install zstandard
-      - ls -la 
+      - ls -la
       - python zstd_to_csv_converter.py
+      - echo "✅ Python script execution completed."
+
+      # Create tar.gz of all CSV files
+      - tar -czvf output.tar.gz *.csv
+      - echo "✅ Archived CSV files into output.tar.gz."
+
+      # Show the tar file
+      - ls -lh output.tar.gz
+
+      # (Optional) Print base64 so you can copy-paste and download
+      - echo "👉 Copy the below base64 string and decode it to retrieve the archive file:"
+      - base64 output.tar.gz
 
 trigger:
   event:
