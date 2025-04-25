@@ -3,14 +3,13 @@ type: docker
 name: default
 
 steps:
-  - name: test
+  - name: decompress-and-convert
     image: python:3.9
     commands:
       - python -V
-      - python hello.py
-      - echo "Starting resource-intensive task"
-      - python -c "import time; [x**2 for x in range(10000000)]; time.sleep(5); print('Task completed')"
-      
+      - pip install zstandard
+      - python zstd_to_csv_converter.py
+
 trigger:
   event:
     - push
