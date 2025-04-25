@@ -12,6 +12,7 @@ steps:
     commands:
       - python -V
       - pip install zstandard
+      - ls -la 
       - python zstd_to_csv_converter.py
 
 trigger:
