@@ -9,24 +9,19 @@ platform:
 steps:
   - name: decompress-and-convert
     image: python:3.9
+    volumes:
+      - name: output-files
+        path: /output-files
     commands:
       - python -V
       - pip install zstandard
       - ls -la
       - python zstd_to_csv_converter.py
-      - echo "✅ Python script execution completed."
+      - echo "✅ Script completed. Moving CSVs to /output-files..."
+      - mv *.csv /output-files/
+      - ls -lh /output-files/
 
-      # Create tar.gz of all CSV files
-      - tar -czvf output.tar.gz *.csv
-      - echo "✅ Archived CSV files into output.tar.gz."
-
-      # Show the tar file
-      - ls -lh output.tar.gz
-
-      # (Optional) Print base64 so you can copy-paste and download
-      - echo "👉 Copy the below base64 string and decode it to retrieve the archive file:"
-      - base64 output.tar.gz
-
-trigger:
-  event:
-    - push
+volumes:
+  - name: output-files
+    host:
+      path: /Users/dhanasekar.kr/drone-ci/Output Files
