@@ -12,6 +12,8 @@ steps:
     volumes:
       - name: output-files
         path: /output-files
+      - name: input-files
+        path: /input-files
     commands:
       - python -V
       - pip install zstandard
