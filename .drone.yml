@@ -21,18 +21,19 @@ steps:
       - mv *.csv /output-files/
       - ls -lh /output-files/
 
-  - name: send-logs-to-slack
-    image: appleboy/slack-action
+  - name: send-notification-to-slack
+    image: plugins/slack
     settings:
-      webhook: https://hooks.slack.com/services/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
+      token:
+        from_secret: SLACK_BOT_TOKEN
       channel: mc-poc
       username: DroneCI
-      text: |
-        Build completed. See attached script logs.
-      attachments:
-        - title: "Script Logs"
-          text: |
-            $(cat /output-files/script.log)
+      template: |
+        ✅ Build completed successfully!
+        Repository: {{repo.name}}
+        Branch: {{build.target}}
+        Commit: {{build.commit}}
+        Build Link: {{build.link}}
 
 volumes:
   - name: output-files
