@@ -39,3 +39,6 @@ volumes:
   - name: output-files
     host:
       path: /Users/dhanasekar.kr/drone-ci/Output Files
+  - name: input-files
+    host:
+      path: /Users/dhanasekar.kr/drone-ci/Input Files
