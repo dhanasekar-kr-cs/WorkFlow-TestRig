@@ -21,6 +21,12 @@ steps:
       - mv *.csv /output-files/
       - ls -lh /output-files/
 
+  - name: slack
+    image: plugins/slack
+    settings:
+      webhook: https://hooks.slack.com/services/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
+      channel: mc-poc
+
 volumes:
   - name: output-files
     host:
