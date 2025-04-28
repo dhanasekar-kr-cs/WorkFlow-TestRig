@@ -25,7 +25,8 @@ steps:
     image: plugins/slack
     settings:
       token:
-        from_secret: SLACK_BOT_TOKEN
+        env :
+          SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       channel: mc-poc
       username: DroneCI
       template: |
