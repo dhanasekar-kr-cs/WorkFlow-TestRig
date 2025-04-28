@@ -26,7 +26,7 @@ steps:
     settings:
       token: 
         env:
-          SUPER_SECRET: ${{ secrets.SuperSecret }}
+          env_secret: SLACK_BOT_TOKEN
       channel: mc-poc
       username: DroneCI
       template: |
