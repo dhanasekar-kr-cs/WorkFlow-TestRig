@@ -24,9 +24,9 @@ steps:
   - name: send-notification-to-slack
     image: plugins/slack
     settings:
-      token: 
-        env:
-          env_secret: SLACK_BOT_TOKEN
+      token:
+          env:
+            SLACK_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       channel: mc-poc
       username: DroneCI
       template: |
