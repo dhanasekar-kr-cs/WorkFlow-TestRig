@@ -23,10 +23,9 @@ steps:
 
   - name: send-notification-to-slack
     image: plugins/slack
-    environment:
-      SLACK_TOKEN:
-        from_secret: SLACK_BOT_TOKEN
     settings:
+      webhook:
+        from_secret: SLACK_WEBHOOKS
       channel: mc-poc
       username: DroneCI
       template: |
