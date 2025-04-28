@@ -52,7 +52,9 @@ def process_file(input_zstd, output_json, output_csv_base, rows_per_file=1000000
     convert_json_to_csv(output_json, output_csv_base, rows_per_file)
 
 # Usage
-input_zstd = 'Test_Log.zst'  # Your zstd compressed input file
+# Update the input path
+input_zstd = '/input-files/Test_Log.zst'  # Your zstd compressed input file
+# input_zstd = 'Test_Log.zst'  # Your zstd compressed input file
 output_json = 'Test.json'  # Decompressed JSON file
 output_csv_base = 'Test'  # Base name for output CSV files 
 rows_per_file = 1000000     # Example: Split into files of 500,000 rows each
