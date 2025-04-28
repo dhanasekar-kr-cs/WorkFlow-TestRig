@@ -16,16 +16,23 @@ steps:
       - python -V
       - pip install zstandard
       - ls -la
-      - python zstd_to_csv_converter.py
+      - python zstd_to_csv_converter.py | tee /output-files/script.log
       - echo "✅ Script completed. Moving CSVs to /output-files..."
       - mv *.csv /output-files/
       - ls -lh /output-files/
 
-  - name: slack
-    image: plugins/slack
+  - name: send-logs-to-slack
+    image: appleboy/slack-action
     settings:
       webhook: https://hooks.slack.com/services/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
       channel: mc-poc
+      username: DroneCI
+      text: |
+        Build completed. See attached script logs.
+      attachments:
+        - title: "Script Logs"
+          text: |
+            $(cat /output-files/script.log)
 
 volumes:
   - name: output-files
