@@ -23,19 +23,19 @@ steps:
       - mv *.csv /output-files/
       - ls -lh /output-files/
 
-  # - name: send-notification-to-slack
-  #   image: plugins/slack
-  #   settings:
-  #     webhook:
-  #       from_secret: SLACK_WEBHOOKS
-  #     channel: mc-poc
-  #     username: DroneCI
-  #     template: |
-  #       ✅ Build completed successfully!
-  #       Repository: {{repo.name}}
-  #       Branch: {{build.target}}
-  #       Commit: {{build.commit}}
-  #       Build Link: {{build.link}}
+  - name: send-notification-to-slack
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: SLACK_WEBHOOKS
+      channel: mc-poc
+      username: DroneCI
+      template: |
+        ✅ Build completed successfully!
+        Repository: {{repo.name}}
+        Branch: {{build.target}}
+        Commit: {{build.commit}}
+        Build Link: {{build.link}}
 
 volumes:
   - name: output-files
