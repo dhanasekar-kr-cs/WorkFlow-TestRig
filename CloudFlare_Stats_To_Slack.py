@@ -1,8 +1,4 @@
 import requests
-import pandas as pd
-import boto3
-import io
-import csv
 from datetime import datetime, date, timedelta
 import time
 import json
@@ -13,10 +9,6 @@ import os
 API_TOKEN = os.getenv("API_TOKEN")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 SLACK_CHANNEL_ID = "C079Z48QE49"
-
-# AWS S3 Configuration
-BUCKET_NAME = 'mission-control-automation'
-S3_KEY = 'Stats/Cloudflare_Stats.csv'
 
 # Color codes for thresholds
 RED_COLOR = "#ff0000"      # For hit ratio < 90%
@@ -165,12 +157,8 @@ def process_account_data(metrics_data):
         "total_5xx": total_5xx
     }
 
-def bytes_to_gb(bytes_value):
-    """Convert bytes to GB with 2 decimal places, without adding the unit"""
-    return round(bytes_value / (1024**3), 2)
-
 def bytes_to_tib(bytes_value):
-    """Convert bytes to TiB with 2 decimal places, for Slack display only"""
+    """Convert bytes to TiB with 2 decimal places"""
     return f"{bytes_value / (1024**4):.2f} TiB"
 
 def format_number(num):
@@ -242,54 +230,6 @@ def send_to_slack(target_date, hit_ratio, cache_coverage, total_requests, origin
         
     return True
 
-def update_cloudflare_csv(data_row):
-    """Update CSV with new data row at the top, similar to the Fastly script approach"""
-    boto3.setup_default_session(profile_name='cse')
-    s3 = boto3.resource('s3')
-    bucket = s3.Bucket(BUCKET_NAME)
-    io_file = io.StringIO()
-    
-    try:
-        # Try to get existing file
-        s3_object = bucket.Object(S3_KEY)
-        s3_data = s3_object.get()['Body'].read().decode('utf-8').splitlines()
-        csv_reader = csv.reader(s3_data)
-        headers = next(csv_reader)
-        
-        # Write headers first
-        writer = csv.writer(io_file)
-        writer.writerow(headers)
-        
-        # Write new data row
-        writer.writerow(data_row)
-        
-        # Check if we already have this date in existing data to avoid duplicates
-        date_exists = False
-        new_date = data_row[0]
-        
-        # Add all existing rows that don't match our new date
-        for row in csv_reader:
-            if len(row) > 0 and row[0] != new_date:
-                writer.writerow(row)
-    
-    except s3.meta.client.exceptions.NoSuchKey:
-        # File doesn't exist, create with default headers with GB indication
-        headers = ['Date', 'Hit Ratio', 'Cache Coverage', 'Total Requests', 
-                   'Cached Requests', 'Total Bandwidth (GB)', 'Cached Bandwidth (GB)', '4xx Errors', '5xx Errors']
-        writer = csv.writer(io_file)
-        writer.writerow(headers)
-        writer.writerow(data_row)
-    
-    # Upload to S3
-    bucket.put_object(
-        Body=io_file.getvalue(),
-        ContentType='application/vnd.ms-excel',
-        Bucket=BUCKET_NAME,
-        Key=S3_KEY
-    )
-    io_file.close()
-    print(f"Successfully updated CSV with new data for {data_row[0]}")
-
 def main():
     print("Starting Cloudflare metrics collection for previous day...")
     
@@ -331,33 +271,23 @@ def main():
     hit_ratio = (total_cached_requests / total_requests * 100) if total_requests > 0 else 0
     cache_coverage = (total_cached_bytes / total_bytes * 100) if total_bytes > 0 else 0
     
-    # Convert bytes to GB for CSV storage
-    total_bytes_gb = bytes_to_gb(total_bytes)
-    cached_bytes_gb = bytes_to_gb(total_cached_bytes)
-    
-    # Create data row for CSV
-    data_row = [
-        formatted_yesterday,
-        round(hit_ratio, 2),
-        round(cache_coverage, 2),
-        total_requests,
-        total_cached_requests,
-        total_bytes_gb,  # Store in GB
-        cached_bytes_gb,  # Store in GB
-        total_4xx,
-        total_5xx
-    ]
-    
-    # Update CSV with new data
-    print(f"Saving data for {formatted_yesterday} to CSV...")
-    update_cloudflare_csv(data_row)
-    
-    # Format for Slack
+    # Format for Slack display
     formatted_requests = format_number(total_requests)
     formatted_origin_fetches = format_number(origin_fetches)
-    formatted_bandwidth = bytes_to_tib(total_bytes)  # Still use TiB for display
+    formatted_bandwidth = bytes_to_tib(total_bytes)
     formatted_4xx = format_number(total_4xx)
     formatted_5xx = format_number(total_5xx)
+    
+    # Print stats summary
+    print(f"\n=== CloudFlare Stats Summary for {formatted_yesterday} ===")
+    print(f"Hit Ratio: {hit_ratio:.2f}%")
+    print(f"Cache Coverage: {cache_coverage:.2f}%")
+    print(f"Total Requests: {formatted_requests}")
+    print(f"Origin Fetches: {formatted_origin_fetches}")
+    print(f"Total Bandwidth: {formatted_bandwidth}")
+    print(f"4xx Errors: {formatted_4xx}")
+    print(f"5xx Errors: {formatted_5xx}")
+    print("=========================================\n")
     
     # Send to Slack
     print("Sending data to Slack...")
@@ -373,7 +303,8 @@ def main():
     )
     
     if slack_result:
-        print("Successfully sent to Slack!")
+        print("Successfully sent CloudFlare stats to Slack!")
+        print("Script completed - no data saved locally (as requested)")
     else:
         print("Failed to send to Slack.")
 

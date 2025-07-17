@@ -12,5 +12,5 @@ steps:
       SLACK_BOT_TOKEN:
         from_secret: SLACK_BOT_TOKEN
     commands:
-      - pip install boto3 pandas requests
+      - pip install requests
       - python CloudFlare_Stats_To_Slack.py
