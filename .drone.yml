@@ -2,8 +2,12 @@ kind: pipeline
 type: docker
 name: test
 
+platform:
+  os: linux
+  arch: arm64
+
 steps:
   - name: hello
     image: alpine
     commands:
-      - echo "🎉 Drone CI is fully working now"
+      - echo "🎉 Drone CI is now working on ARM64!"
