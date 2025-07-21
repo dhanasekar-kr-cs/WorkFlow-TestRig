@@ -1,16 +1,9 @@
 kind: pipeline
 type: docker
-name: default
-
+name: test
 
 steps:
-  - name: run-cloudflare-script
-    image: python:3.9
-    environment:
-      API_TOKEN:
-        from_secret: API_TOKEN
-      SLACK_BOT_TOKEN:
-        from_secret: SLACK_BOT_TOKEN
+  - name: hello
+    image: alpine
     commands:
-      - pip install requests
-      - python CloudFlare_Stats_To_Slack.py
+      - echo "🎉 Drone CI is fully working now"
