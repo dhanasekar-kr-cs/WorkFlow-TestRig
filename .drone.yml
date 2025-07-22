@@ -1,29 +1,33 @@
 kind: pipeline
 type: docker
-name: cloudflare-stats
+name: decompress-and-convert
 
 platform:
   os: linux
   arch: arm64
 
 steps:
-  - name: decompress-and-convert
+  - name: run-conversion-script
     image: python:3.9
     volumes:
+      - name: input-files
+        path: /input-files
       - name: output-files
         path: /output-files
     commands:
       - python -V
       - pip install zstandard
-      - ls -la
+      - ls -la /input-files
+      - cp /input-files/*.zst .  # Copy input file to working dir
       - python zstd_to_csv_converter.py | tee /output-files/script.log
       - echo "✅ Script completed. Moving CSVs to /output-files..."
       - mv *.csv /output-files/
-      - ls -lh /output-files/
+      - ls -lh /output-files
 
 volumes:
+  - name: input-files
+    host:
+      path: /home/ubuntu/drone-ci/input
   - name: output-files
     host:
       path: /home/ubuntu/drone-ci/output
-
-      
