@@ -7,13 +7,23 @@ platform:
   arch: arm64
 
 steps:
-  - name: run-cloudflare-script
+  - name: decompress-and-convert
     image: python:3.9
-    environment:
-      API_TOKEN:
-        from_secret: API_TOKEN
-      SLACK_BOT_TOKEN:
-        from_secret: SLACK_BOT_TOKEN
+    volumes:
+      - name: output-files
+        path: /output-files
     commands:
-      - pip install requests
-      - python CloudFlare_Stats_To_Slack.py
+      - python -V
+      - pip install zstandard
+      - ls -la
+      - python zstd_to_csv_converter.py | tee /output-files/script.log
+      - echo "✅ Script completed. Moving CSVs to /output-files..."
+      - mv *.csv /output-files/
+      - ls -lh /output-files/
+
+volumes:
+  - name: output-files
+    host:
+      path: /home/ubuntu/drone-ci/output
+
+      
