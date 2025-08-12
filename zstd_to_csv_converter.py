@@ -13,7 +13,7 @@ def decompress_zstd_file(input_file, output_file):
 def convert_json_to_csv(input_file, output_file_base, rows_per_file):
     headers = ['timestamp', 'geo_city', 'response_status', 'org', 'apiKey', 'shield', 'cache', 'host', 'pop', 'resTime', 'response_body_size', 'request_user_agent', 'response_body_size', 'url'] 
     file_count = 1
-    row_count = 0
+    row_count = 0 # Initialize row count to 0
 
     with open(input_file, 'r') as json_file:
         csv_file = open(f"{output_file_base}_{file_count}.csv", 'w', newline='')
