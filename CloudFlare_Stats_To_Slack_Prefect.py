@@ -1,11 +1,9 @@
 import requests
 from datetime import datetime, timedelta
-import os
 from prefect import flow, task
+from prefect.blocks.system import Secret
 
-# Configuration
-API_TOKEN = os.getenv("API_TOKEN")
-SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
+# Configuration - Using Prefect Secret Blocks
 SLACK_CHANNEL_ID = "C079Z48QE49"
 
 RED_COLOR = "#ff0000"
@@ -19,9 +17,9 @@ def get_yesterday_date():
     return today - timedelta(days=1)
 
 @task
-def get_account_id():
+async def get_account_id(api_token):
     url = "https://api.cloudflare.com/client/v4/accounts"
-    headers = {"Authorization": f"Bearer {API_TOKEN}", "Content-Type": "application/json"}
+    headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
     response = requests.get(url, headers=headers)
     if response.status_code != 200: 
         return None
@@ -31,9 +29,9 @@ def get_account_id():
     return data["result"][0]["id"]
 
 @task
-def get_aggregated_metrics(date, account_id):
+async def get_aggregated_metrics(date, account_id, api_token):
     url = "https://api.cloudflare.com/client/v4/graphql"
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {API_TOKEN}"}
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_token}"}
     query = """
     {
       viewer {
@@ -85,7 +83,7 @@ def get_hit_ratio_color(hit_ratio):
     else: return GREEN_COLOR
 
 @task
-def send_to_slack(target_date, hit_ratio, cache_coverage, total_requests, origin_fetches, bandwidth, status_4xx, status_5xx):
+async def send_to_slack(target_date, hit_ratio, cache_coverage, total_requests, origin_fetches, bandwidth, status_4xx, status_5xx, slack_bot_token):
     color = get_hit_ratio_color(hit_ratio)
     text = (
         f"*Avg Hit Ratio: {hit_ratio:.2f}%*\n"
@@ -97,18 +95,28 @@ def send_to_slack(target_date, hit_ratio, cache_coverage, total_requests, origin
         f"*CDN Status 5xx Requests: {status_5xx}*"
     )
     payload = {"channel": SLACK_CHANNEL_ID, "text": f"Cloudflare Stats *{target_date}*", "attachments":[{"fallback":"Cloudflare Performance Stats","color":color,"text":text}]}
-    response = requests.post("https://slack.com/api/chat.postMessage", headers={"Content-Type":"application/json","Authorization":f"Bearer {SLACK_BOT_TOKEN}"}, json=payload)
+    response = requests.post("https://slack.com/api/chat.postMessage", headers={"Content-Type":"application/json","Authorization":f"Bearer {slack_bot_token}"}, json=payload)
     return response.status_code == 200
 
 # ----------------- Flow -----------------
 @flow(name="Cloudflare Stats Flow")
-def cloudflare_stats_flow():
+async def cloudflare_stats_flow():
+    # Load tokens from Prefect Secret Blocks
+    cloudflare_token_block = await Secret.load("cloudflare-api-token")
+    slack_token_block = await Secret.load("slack-bot-token")
+    
+    api_token = cloudflare_token_block.get()
+    slack_bot_token = slack_token_block.get()
+    
+    print(f"🔐 Loaded CloudFlare API token: {api_token[:10]}...")
+    print(f"🔐 Loaded Slack Bot token: {slack_bot_token[:10]}...")
+    
     yesterday = get_yesterday_date()
     formatted_yesterday = yesterday.strftime("%Y-%m-%d")
-    account_id = get_account_id()
+    account_id = await get_account_id(api_token)
     if not account_id: return
     
-    metrics = get_aggregated_metrics(formatted_yesterday, account_id)
+    metrics = await get_aggregated_metrics(formatted_yesterday, account_id, api_token)
     stats = process_account_data(metrics)
     if not stats: return
 
@@ -117,8 +125,9 @@ def cloudflare_stats_flow():
     cache_coverage = (stats["total_cached_bytes"] / stats["total_bytes"] * 100) if stats["total_bytes"]>0 else 0
     bandwidth = f"{stats['total_bytes']/(1024**4):.2f} TiB"
 
-    send_to_slack(formatted_yesterday, hit_ratio, cache_coverage, stats["total_requests"], origin_fetches, bandwidth, stats["total_4xx"], stats["total_5xx"])
+    await send_to_slack(formatted_yesterday, hit_ratio, cache_coverage, stats["total_requests"], origin_fetches, bandwidth, stats["total_4xx"], stats["total_5xx"], slack_bot_token)
 
 # Run flow if script executed directly
 if __name__ == "__main__":
-    cloudflare_stats_flow()
+    import asyncio
+    asyncio.run(cloudflare_stats_flow())
