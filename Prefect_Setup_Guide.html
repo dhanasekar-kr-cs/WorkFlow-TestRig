@@ -134,6 +134,10 @@
                 <li><a href="#security">🔐 Security Best Practices</a></li>
                 <li><a href="#production">📈 Scaling and Production</a></li>
                 <li><a href="#development">🛠️ Development Workflow</a></li>
+                <li><a href="#auto-deploy-script">🤖 Auto-Deploy Script Details</a></li>
+                <li><a href="#prefect-yaml">⚙️ Prefect Configuration</a></li>
+                <li><a href="#requirements">📦 Dependencies</a></li>
+                <li><a href="#flow-examples">💻 Complete Flow Examples</a></li>
             </ul>
         </div>
 
@@ -460,6 +464,472 @@ flows_to_deploy.append({
                 </ul>
             </li>
         </ol>
+
+        <h2 id="auto-deploy-script"><span class="emoji">🤖</span> Auto-Deploy Script Details</h2>
+        
+        <h3>Script: auto_deploy_flows.py</h3>
+        <p>This script automatically discovers and deploys all Prefect flows in the directory every 2 minutes.</p>
+        
+        <pre><code>#!/usr/bin/env python3
+"""
+Simple Auto-Deploy Script for Prefect Flows
+Automatically deploys all known Prefect flows in the directory.
+"""
+
+import os
+import sys
+from datetime import datetime
+
+# Add the current directory to Python path
+sys.path.insert(0, '/home/ubuntu/WorkFlow-TestRig')
+
+def auto_deploy_flows():
+    """Auto-deploy all known flows"""
+    print(f"🔍 Auto-Deploy Started at {datetime.now()}")
+    print("=" * 50)
+    
+    flows_deployed = 0
+    
+    # List of known flows to deploy
+    flows_to_deploy = [
+        {
+            'module': 'CloudFlare_Stats_To_Slack_Prefect',
+            'flow_name': 'cloudflare_stats_flow',
+            'deployment_name': 'cloudflare-stats-flow'
+        },
+        {
+            'module': 'zstd_to_csv_converter_prefect', 
+            'flow_name': 'zstd_to_csv_converter_flow',
+            'deployment_name': 'zstd-to-csv-converter-flow'
+        }
+    ]
+    
+    for flow_info in flows_to_deploy:
+        try:
+            print(f"\n📄 Processing: {flow_info['module']}")
+            
+            # Import the module
+            module = __import__(flow_info['module'])
+            flow_func = getattr(module, flow_info['flow_name'])
+            
+            print(f"✅ Found flow: {flow_func.name}")
+            
+            # Create deployment
+            deployment = flow_func.to_deployment(
+                name=flow_info['deployment_name'],
+                work_pool_name='default-pool'
+            )
+            
+            print(f"🚀 Deployed: {flow_info['deployment_name']}")
+            flows_deployed += 1
+            
+        except Exception as e:
+            print(f"❌ Error deploying {flow_info['module']}: {e}")
+            continue
+    
+    print(f"\n🎉 Auto-Deploy Complete!")
+    print(f"✅ Successfully deployed: {flows_deployed}/{len(flows_to_deploy)} flows")
+    print(f"⏰ Next run in 2 minutes...")
+
+if __name__ == "__main__":
+    auto_deploy_flows()</code></pre>
+
+        <h3>Monitoring Script: check_auto_deploy.py</h3>
+        <p>This script monitors the auto-deployment system and shows status information.</p>
+        
+        <pre><code>#!/usr/bin/env python3
+"""
+Monitor Auto-Deploy Script
+Shows the status of automatic deployments
+"""
+
+import os
+from datetime import datetime
+
+def check_auto_deploy_status():
+    """Check the status of auto-deployment"""
+    print("🔍 Auto-Deploy Status Check")
+    print("=" * 40)
+    
+    log_file = "/home/ubuntu/auto_deploy.log"
+    
+    if os.path.exists(log_file):
+        print(f"📄 Log file exists: {log_file}")
+        
+        # Get file size and modification time
+        stat = os.stat(log_file)
+        size = stat.st_size
+        mtime = datetime.fromtimestamp(stat.st_mtime)
+        
+        print(f"📏 Log file size: {size} bytes")
+        print(f"⏰ Last modified: {mtime}")
+        
+        # Show last few lines
+        print(f"\n📋 Last 10 lines of log:")
+        print("-" * 40)
+        
+        try:
+            with open(log_file, 'r') as f:
+                lines = f.readlines()
+                for line in lines[-10:]:
+                    print(line.strip())
+        except Exception as e:
+            print(f"❌ Error reading log: {e}")
+    else:
+        print(f"❌ Log file not found: {log_file}")
+        print("💡 The cron job hasn't run yet or there's an issue")
+    
+    print(f"\n⏰ Current time: {datetime.now()}")
+    print("🔄 Next auto-deploy should run within 2 minutes...")
+
+if __name__ == "__main__":
+    check_auto_deploy_status()</code></pre>
+
+        <h3>Cron Job Setup</h3>
+        <p>To set up automatic deployment every 2 minutes:</p>
+        
+        <pre><code># Add to crontab
+*/2 * * * * cd /home/ubuntu/WorkFlow-TestRig && source /home/ubuntu/.venv/prefect/bin/activate && python auto_deploy_flows.py >> /home/ubuntu/auto_deploy.log 2>&1</code></pre>
+
+        <h2 id="prefect-yaml"><span class="emoji">⚙️</span> Prefect Configuration</h2>
+        
+        <h3>prefect.yaml Configuration</h3>
+        <p>This file defines deployment configurations for all flows:</p>
+        
+        <pre><code># Welcome to your prefect.yaml file! You can use this file for storing and managing
+# configuration for deploying your flows. We recommend committing this file to source
+# control along with your flow code.
+
+# Generic metadata about this project
+name: WorkFlow-TestRig
+prefect-version: 3.4.11
+
+# build section allows you to manage and build docker images
+build: null
+
+# push section allows you to manage if and how this project is uploaded to remote locations
+push: null
+
+# pull section allows you to provide instructions for cloning this project in remote locations
+pull:
+- prefect.deployments.steps.set_working_directory:
+    directory: /home/ubuntu/WorkFlow-TestRig
+
+# the deployments section allows you to provide configuration for deploying flows
+deployments:
+# CloudFlare Stats Flow Deployment
+- name: cloudflare-stats-deployment
+  version: 1.0.0
+  tags: [cloudflare, slack, monitoring]
+  description: "CloudFlare statistics to Slack notification flow"
+  schedule: {}
+  flow_name: Cloudflare Stats Flow
+  entrypoint: CloudFlare_Stats_To_Slack_Prefect.py:cloudflare_stats_flow
+  parameters: {}
+  work_pool:
+    name: default-pool
+    work_queue_name: null
+    job_variables: {}
+
+# ZSTD to CSV Converter Deployment  
+- name: zstd-to-csv-converter-deployment
+  version: 1.0.0
+  tags: [zstd, csv, data-processing]
+  description: "Convert ZSTD compressed files to CSV format"
+  schedule: {}
+  flow_name: ZSTD to CSV Converter Flow
+  entrypoint: zstd_to_csv_converter_prefect.py:zstd_to_csv_converter_flow
+  parameters: {}
+  work_pool:
+    name: default-pool
+    work_queue_name: null
+    job_variables: {}</code></pre>
+
+        <h2 id="requirements"><span class="emoji">📦</span> Dependencies</h2>
+        
+        <h3>requirement.txt</h3>
+        <pre><code>prefect>=3.0.0
+requests>=2.28.0
+zstandard>=0.21.0</code></pre>
+
+        <h2 id="flow-examples"><span class="emoji">💻</span> Complete Flow Examples</h2>
+        
+        <h3>CloudFlare Stats Flow</h3>
+        <pre><code>import requests
+from datetime import datetime, timedelta
+from prefect import flow, task
+from prefect.blocks.system import Secret
+
+# Configuration - Using Prefect Secret Blocks
+SLACK_CHANNEL_ID = "C079Z48QE49"
+
+RED_COLOR = "#ff0000"
+YELLOW_COLOR = "#F7DC6F"
+GREEN_COLOR = "#229954"
+
+@task
+def get_yesterday_date():
+    today = datetime.utcnow().date()
+    return today - timedelta(days=1)
+
+@task
+async def get_account_id(api_token):
+    url = "https://api.cloudflare.com/client/v4/accounts"
+    headers = {"Authorization": f"Bearer {api_token}", "Content-Type": "application/json"}
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200: 
+        return None
+    data = response.json()
+    if not data["success"] or not data["result"]: 
+        return None
+    return data["result"][0]["id"]
+
+@task
+async def get_aggregated_metrics(date, account_id, api_token):
+    url = "https://api.cloudflare.com/client/v4/graphql"
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_token}"}
+    query = """
+    {
+      viewer {
+        accounts(filter: {accountTag: "%s"}) {
+          httpRequests1dGroups(limit: 1, filter: {date: "%s"}) {
+            dimensions { date }
+            sum {
+              requests
+              bytes
+              cachedBytes
+              cachedRequests
+              responseStatusMap { edgeResponseStatus requests }
+            }
+          }
+        }
+      }
+    }""" % (account_id, date)
+    response = requests.post(url, headers=headers, json={"query": query})
+    return response.json() if response.status_code == 200 else None
+
+@task
+def process_account_data(metrics_data):
+    if not metrics_data or "data" not in metrics_data: return None
+    viewer = metrics_data["data"].get("viewer", {})
+    accounts = viewer.get("accounts", [])
+    totals = {"total_requests":0, "total_cached_requests":0, "total_bytes":0, "total_cached_bytes":0, "total_4xx":0, "total_5xx":0}
+
+    for account in accounts:
+        http_group = account.get("httpRequests1dGroups", [{}])[0]
+        stats = http_group.get("sum", {})
+        totals["total_requests"] += stats.get("requests",0)
+        totals["total_cached_requests"] += stats.get("cachedRequests",0)
+        totals["total_bytes"] += stats.get("bytes",0)
+        totals["total_cached_bytes"] += stats.get("cachedBytes",0)
+
+        for status in stats.get("responseStatusMap", []):
+            try:
+                code = int(status["edgeResponseStatus"])
+                count = status["requests"]
+                if 400 <= code < 500: totals["total_4xx"] += count
+                elif 500 <= code < 600: totals["total_5xx"] += count
+            except ValueError: continue
+    return totals
+
+@task
+def get_hit_ratio_color(hit_ratio):
+    if hit_ratio < 90: return RED_COLOR
+    elif hit_ratio < 95: return YELLOW_COLOR
+    else: return GREEN_COLOR
+
+@task
+async def send_to_slack(target_date, hit_ratio, cache_coverage, total_requests, origin_fetches, bandwidth, status_4xx, status_5xx, slack_bot_token):
+    color = get_hit_ratio_color(hit_ratio)
+    text = (
+        f"*Avg Hit Ratio: {hit_ratio:.2f}%*\n"
+        f"*Avg Cache Coverage: {cache_coverage:.2f}%*\n"
+        f"*CDN Requests: {total_requests}*\n"
+        f"*CDN Origin Fetches: {origin_fetches}*\n"
+        f"*CDN Bandwidth: {bandwidth}*\n"
+        f"*CDN Status 4xx Requests: {status_4xx}*\n"
+        f"*CDN Status 5xx Requests: {status_5xx}*"
+    )
+    payload = {"channel": SLACK_CHANNEL_ID, "text": f"Cloudflare Stats *{target_date}*", "attachments":[{"fallback":"Cloudflare Performance Stats","color":color,"text":text}]}
+    response = requests.post("https://slack.com/api/chat.postMessage", headers={"Content-Type":"application/json","Authorization":f"Bearer {slack_bot_token}"}, json=payload)
+    return response.status_code == 200
+
+@flow(name="Cloudflare Stats Flow")
+async def cloudflare_stats_flow():
+    # Load tokens from Prefect Secret Blocks
+    cloudflare_token_block = await Secret.load("cloudflare-api-token")
+    slack_token_block = await Secret.load("slack-bot-token")
+    
+    api_token = cloudflare_token_block.get()
+    slack_bot_token = slack_token_block.get()
+    
+    print(f"🔐 Loaded CloudFlare API token: {api_token[:10]}...")
+    print(f"🔐 Loaded Slack Bot token: {slack_bot_token[:10]}...")
+    
+    yesterday = get_yesterday_date()
+    formatted_yesterday = yesterday.strftime("%Y-%m-%d")
+    account_id = await get_account_id(api_token)
+    if not account_id: return
+    
+    metrics = await get_aggregated_metrics(formatted_yesterday, account_id, api_token)
+    stats = process_account_data(metrics)
+    if not stats: return
+
+    origin_fetches = stats["total_requests"] - stats["total_cached_requests"]
+    hit_ratio = (stats["total_cached_requests"] / stats["total_requests"] * 100) if stats["total_requests"]>0 else 0
+    cache_coverage = (stats["total_cached_bytes"] / stats["total_bytes"] * 100) if stats["total_bytes"]>0 else 0
+    bandwidth = f"{stats['total_bytes']/(1024**4):.2f} TiB"
+
+    await send_to_slack(formatted_yesterday, hit_ratio, cache_coverage, stats["total_requests"], origin_fetches, bandwidth, stats["total_4xx"], stats["total_5xx"], slack_bot_token)
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(cloudflare_stats_flow())</code></pre>
+
+        <h3>ZSTD to CSV Converter Flow</h3>
+        <pre><code>#!/usr/bin/env python3
+
+import os
+import json
+import csv
+import zstandard as zstd
+from prefect import flow, task
+from datetime import datetime
+
+@task
+def decompress_zstd_file(input_file, output_file):
+    """Decompress zstd file to JSON"""
+    print(f"📦 Starting decompression of {input_file}...")
+    print(f"📏 Input file size: {os.path.getsize(input_file):,} bytes")
+    
+    with open(input_file, 'rb') as compressed_file:
+        dctx = zstd.ZstdDecompressor()
+        with open(output_file, 'wb') as decompressed_file:
+            dctx.copy_stream(compressed_file, decompressed_file)
+    
+    print(f"✅ Decompression complete. File saved as {output_file}")
+    print(f"📏 Output file size: {os.path.getsize(output_file):,} bytes")
+    return output_file
+
+@task
+def convert_json_to_csv(input_file, output_file_base, rows_per_file):
+    """Convert JSON to CSV files"""
+    print(f"🔄 Starting conversion of {input_file} to CSV...")
+    print(f"📊 Target: {rows_per_file:,} rows per CSV file")
+    
+    headers = ['timestamp', 'geo_city', 'response_status', 'org', 'apiKey', 'shield', 'cache', 'host', 'pop', 'resTime', 'response_body_size', 'request_user_agent', 'response_body_size', 'url'] 
+    file_count = 1
+    row_count = 0
+    total_lines_processed = 0
+
+    with open(input_file, 'r') as json_file:
+        csv_file = open(f"{output_file_base}_{file_count}.csv", 'w', newline='')
+        writer = csv.DictWriter(csv_file, fieldnames=headers)
+        writer.writeheader()
+
+        for line_num, line in enumerate(json_file, 1):
+            if line.strip():
+                try:
+                    data = json.loads(line)
+                    row = {key: data.get(key, '') for key in headers}
+                    writer.writerow(row)
+                    row_count += 1
+                    total_lines_processed += 1
+
+                    # Progress logging every 10,000 lines
+                    if line_num % 10000 == 0:
+                        print(f"📈 Processed {line_num:,} lines, {row_count:,} rows in current file")
+
+                    if row_count >= rows_per_file:
+                        csv_file.close()
+                        print(f"✅ Completed CSV file {file_count} with {row_count:,} rows")
+                        file_count += 1
+                        row_count = 0
+                        csv_file = open(f"{output_file_base}_{file_count}.csv", 'w', newline='')
+                        writer = csv.DictWriter(csv_file, fieldnames=headers)
+                        writer.writeheader()
+
+                except json.JSONDecodeError as e:
+                    print(f"⚠️  Error parsing line {line_num}: {e}")
+                    continue
+
+        csv_file.close()
+
+    print(f"🎉 Conversion complete! Created {file_count} CSV files")
+    print(f"📊 Total lines processed: {total_lines_processed:,}")
+    print(f"📁 Files saved as: {output_file_base}_1.csv, {output_file_base}_2.csv, etc.")
+    return file_count
+
+@task
+def cleanup_temp_file(file_path):
+    """Clean up temporary JSON file"""
+    if os.path.exists(file_path):
+        file_size = os.path.getsize(file_path)
+        os.remove(file_path)
+        print(f"🗑️  Cleaned up temporary file: {file_path}")
+        print(f"📏 Freed up {file_size:,} bytes of disk space")
+    return True
+
+@flow(name="ZSTD to CSV Converter Flow")
+def zstd_to_csv_converter_flow():
+    """Main flow to convert zstd file to CSV"""
+    print("🚀 Starting ZSTD to CSV conversion process...")
+
+    # File paths
+    input_zstd = '/home/ubuntu/Files/Input.zstd'
+    output_json = '/home/ubuntu/Output files/temp_conversion.json'
+    output_csv_base = '/home/ubuntu/Output files/converted_data'
+    rows_per_file = 1000000
+
+    # Create output directory if it doesn't exist
+    os.makedirs('/home/ubuntu/Output files', exist_ok=True)
+
+    print(f"📂 Input file: {input_zstd}")
+    print(f"📄 Output JSON: {output_json}")
+    print(f"📊 Output CSV base: {output_csv_base}")
+    print(f"📈 Rows per CSV file: {rows_per_file:,}")
+
+    # Check if input file exists
+    if not os.path.exists(input_zstd):
+        print(f"❌ Error: Input file {input_zstd} not found!")
+        return
+
+    print(f"✅ Input file found! Size: {os.path.getsize(input_zstd):,} bytes")
+
+    # Step 1: Decompress the zstd file
+    print("\n🔄 STEP 1: Decompressing ZSTD file...")
+    decompressed_file = decompress_zstd_file(input_zstd, output_json)
+
+    # Step 2: Check if the decompressed file exists
+    if not os.path.exists(output_json):
+        print(f"❌ Error: Decompressed file {output_json} not found.")
+        return
+
+    print(f"✅ Decompression successful!")
+
+    # Step 3: Convert the decompressed JSON to CSV
+    print("\n🔄 STEP 2: Converting JSON to CSV files...")
+    csv_file_count = convert_json_to_csv(output_json, output_csv_base, rows_per_file)
+
+    # Step 4: Clean up temporary JSON file
+    print("\n🔄 STEP 3: Cleaning up temporary files...")
+    cleanup_temp_file(output_json)
+
+    print(f"✅ Conversion completed successfully!")
+    print(f"📁 Created {csv_file_count} CSV files in /home/ubuntu/Output files/")
+    print(f"📊 Each file contains up to {rows_per_file:,} rows")
+    print(f"🎯 Output directory: /home/ubuntu/Output files/")
+
+    return {
+        "status": "success",
+        "csv_files_created": csv_file_count,
+        "rows_per_file": rows_per_file,
+        "output_directory": "/home/ubuntu/Output files/"
+    }
+
+if __name__ == "__main__":
+    result = zstd_to_csv_converter_flow()
+    print(f"Final result: {result}")</code></pre>
 
         <div class="footer">
             <p><strong>Last Updated:</strong> October 2024 | <strong>Version:</strong> 1.0.0 | <strong>Prefect Version:</strong> 3.x</p>
