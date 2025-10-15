@@ -1,0 +1,41 @@
+# filename: .gocd.yml
+# GoCD YAML config plugin (recommended). If not installed, you can use UI XML config; let me know and I’ll convert.
+format_version: 10
+
+pipelines:
+  python-app-ci:
+    group: python
+    label_template: "${COUNT}"
+    materials:
+      repo:
+        git: "https://your.git.server/org/python-app.git"
+        branch: main
+        auto_update: true
+    environment_variables:
+      PYTHON_BIN: "python3"
+      VENV_DIR: ".venv"
+      TEST_REPORT_DIR: "build/test-reports"
+      COVERAGE_DIR: "build/coverage"
+    stages:
+      - build_and_test:
+          clean_working_directory: true
+          jobs:
+            run:
+              artifacts:
+                - build:
+                    source: build/test-reports
+                    destination: test-reports
+                - build:
+                    source: build/coverage
+                    destination: coverage
+              tasks:
+                - exec:
+                    command: bash
+                    arguments:
+                      - "-lc"
+                      - "chmod +x scripts/setup_venv.sh scripts/run_tests.sh && ./scripts/setup_venv.sh"
+                - exec:
+                    command: bash
+                    arguments:
+                      - "-lc"
+                      - "./scripts/run_tests.sh"
